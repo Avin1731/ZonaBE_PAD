@@ -15,11 +15,7 @@
 /node_modules
 /public/build
 /public/hot
-# /public/storage
-/storage/framework
-/storage/logs
-/storage/app/dlh
-/storage/app/pusdatin
+/public/storage
 /storage/*.key
 /storage/pail
 /vendor
@@ -27,3 +23,7 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 /PAD
+
+# Allow templates folder to be pushed to Git
+!/storage/app/templates
+!/storage/app/templates/**
