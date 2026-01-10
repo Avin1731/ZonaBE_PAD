@@ -8,6 +8,16 @@ use App\Http\Controllers\Dinas\UploadController;
 use App\Http\Controllers\Pusdatin\PenilaianSLHD_Controller;
 use App\http\Controllers\Pusdatin\PenilaianPenghargaan_Controller;
 
+
+// --- GENERAL ROUTES ---
+Route::get('/analytics/visit', function () {
+    return response()->json([
+        'visits' => 1234,
+        'message' => 'Backend Laravel Live! 🚀'
+    ]); 
+});
+
+// --- AUTH ROUTES ---
 Route::post('/login', [App\Http\Controllers\Auth\AuthController::class, 'login']);
 Route::post('/register', [App\Http\Controllers\Auth\AuthController::class, 'register']);
 Route::post('/logout', [App\Http\Controllers\Auth\AuthController::class, 'logout'])->middleware('auth:sanctum');
