@@ -9,12 +9,21 @@ use App\Http\Controllers\Pusdatin\PenilaianSLHD_Controller;
 use App\http\Controllers\Pusdatin\PenilaianPenghargaan_Controller;
 
 
-// --- GENERAL ROUTES ---
+// --- ROUTES ANALYTICS ---
+// Langsung tulis, tidak perlu prefix 'api' lagi di sini
+
 Route::get('/analytics/visit', function () {
     return response()->json([
-        'visits' => 1234,
-        'message' => 'Backend Laravel Live! 🚀'
-    ]); 
+        'visits' => 1234, // Ambil dari DB nanti
+        'status' => 'Backend Laravel Live via API File! 🚀'
+    ]);
+});
+
+Route::put('/analytics/visit', function () {
+    return response()->json([
+        'visits' => 8888,
+        'status' => 'Updated Success!'
+    ]);
 });
 
 // --- AUTH ROUTES ---
