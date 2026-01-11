@@ -137,7 +137,7 @@ class TestingDataSeeder extends Seeder
         $this->command->info('🚀 Inserting users into TiDB (Bulk Mode)...');
         
         foreach ($chunks as $chunk) {
-            User::insert($chunk);
+            User::upsert($chunk, ['email'], ['password', 'role', 'dinas_id', 'is_active', 'updated_at']);
             $this->command->info('✅ Inserted batch of ' . count($chunk) . ' users.');
         }
         
