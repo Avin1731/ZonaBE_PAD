@@ -28,7 +28,7 @@ class TestingDataSeeder extends Seeder
     {
         $this->command->info('🚀 Starting Testing Data Seeder...');
         
-        DB::beginTransaction();
+        // DB::beginTransaction();
         try {
             // 1. Create admin & pusdatin users
             $this->command->info('👤 Creating admin & pusdatin users...');
@@ -38,18 +38,27 @@ class TestingDataSeeder extends Seeder
             $this->command->info('👥 Creating users for all dinas...');
             $this->seedDinasUsers();
             
-            // 3. Seed Submissions & Documents untuk N dinas
+            // 3. Seed Submissions & Documents Custom Range
             $this->command->info('📄 Creating submissions & documents...');
-            $dinasCount = $this->seedSubmissionsAndDocuments(50, 2026); // 100 dinas pertama
             
-            DB::commit();
+            // Bikin daftar ID: 1 sampai 10 DAN 50 sampai 60
+            $ids_grup_1 = range(1, 10);   // [1, 2, ..., 10]
+            $ids_grup_2 = range(50, 60);  // [50, 51, ..., 60]
+            
+            // Gabung jadi satu array
+            $targetIds = array_merge($ids_grup_1, $ids_grup_2); 
+            
+            // Panggil function dengan array ID tadi
+            $dinasCount = $this->seedSubmissionsAndDocuments($targetIds, 2026);
+            
+            // DB::commit();
             
             $this->command->info('✅ Testing data seeded successfully!');
             $this->command->info("📊 Total users: " . User::count());
             $this->command->info("📊 Submissions created for {$dinasCount} dinas");
             
         } catch (\Exception $e) {
-            DB::rollBack();
+            // DB::rollBack();
             $this->command->error('❌ Seeding failed: ' . $e->getMessage());
             throw $e;
         }
