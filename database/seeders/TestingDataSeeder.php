@@ -21,49 +21,9 @@ class TestingDataSeeder extends Seeder
 {
     /**
      * Seed data untuk testing: menggunakan dinas existing (576 dinas)
-     * - Bikin users untuk semua dinas
+     * - Bikin users untuk semua dinas (Bulk Mode)
      * - Bikin submissions + documents untuk N dinas (configurable)
      */
-    // public function run(): void
-    // {
-    //     $this->command->info('🚀 Starting Testing Data Seeder...');
-        
-    //     // DB::beginTransaction();
-    //     try {
-    //         // 1. Create admin & pusdatin users
-    //         $this->command->info('👤 Creating admin & pusdatin users...');
-    //         $this->seedAdminUsers();
-            
-    //         // 2. Create users untuk semua dinas existing
-    //         $this->command->info('👥 Creating users for all dinas...');
-    //         $this->seedDinasUsers();
-            
-    //         // 3. Seed Submissions & Documents Custom Range
-    //         $this->command->info('📄 Creating submissions & documents...');
-            
-    //         // Bikin daftar ID: 1 sampai 10 DAN 50 sampai 60
-    //         $ids_grup_1 = range(1, 10);   // [1, 2, ..., 10]
-    //         $ids_grup_2 = range(50, 60);  // [50, 51, ..., 60]
-            
-    //         // Gabung jadi satu array
-    //         $targetIds = array_merge($ids_grup_1, $ids_grup_2); 
-            
-    //         // Panggil function dengan array ID tadi
-    //         $dinasCount = $this->seedSubmissionsAndDocuments($targetIds, 2026);
-            
-    //         // DB::commit();
-            
-    //         $this->command->info('✅ Testing data seeded successfully!');
-    //         $this->command->info("📊 Total users: " . User::count());
-    //         $this->command->info("📊 Submissions created for {$dinasCount} dinas");
-            
-    //     } catch (\Exception $e) {
-    //         // DB::rollBack();
-    //         $this->command->error('❌ Seeding failed: ' . $e->getMessage());
-    //         throw $e;
-    //     }
-    // }
-    
     public function run(): void
     {
         $this->command->info('🚀 Starting Testing Data Seeder (Mode Anti-Stuck)...');
@@ -74,7 +34,7 @@ class TestingDataSeeder extends Seeder
             $this->command->info('👤 Creating admin & pusdatin users...');
             $this->seedAdminUsers();
             
-            // 2. Create users untuk semua dinas (Pake Reconnect di dalamnya biar aman)
+            // 2. Create users untuk semua dinas (Bulk Insert Mode)
             $this->command->info('👥 Creating users for all dinas...');
             $this->seedDinasUsers();
             
@@ -82,7 +42,6 @@ class TestingDataSeeder extends Seeder
             $this->command->info('📄 Creating submissions & documents...');
             
             // Kita ambil ID 1, 2, dan 50 (Perwakilan grup)
-            // Gak usah range(1,10), kelamaan bang!
             $targetIds = [1, 2, 50]; 
             
             // Panggil function
@@ -99,7 +58,7 @@ class TestingDataSeeder extends Seeder
             throw $e;
         }
     }
-
+    
     /**
      * Create admin & pusdatin users
      */
@@ -141,35 +100,8 @@ class TestingDataSeeder extends Seeder
     }
     
     /**
-     * Create users untuk semua dinas existing
+     * Create users untuk semua dinas existing (Optimized Bulk Insert)
      */
-    // private function seedDinasUsers(): void
-    // {
-    //     $allDinas = Dinas::with('region')->get();
-        
-    //     $progressBar = $this->command->getOutput()->createProgressBar($allDinas->count());
-    //     $progressBar->start();
-        
-    //     foreach ($allDinas as $index => $dinas) {
-    //         $kodeDinas = str_pad($index + 1, 3, '0', STR_PAD_LEFT);
-            
-    //         User::firstOrCreate(
-    //             ['email' => "dlh{$kodeDinas}@test.com"],
-    //             [
-    //                 'password' => Hash::make('password'),
-    //                 'role' => $dinas->region->type, // 'provinsi' or 'kabupaten/kota'
-    //                 'dinas_id' => $dinas->id,
-    //                 'is_active' => true,
-    //             ]
-    //         );
-            
-    //         $progressBar->advance();
-    //     }
-        
-    //     $progressBar->finish();
-    //     $this->command->newLine();
-    // }
-    
     private function seedDinasUsers(): void
     {
         // 1. Ambil semua data Dinas (Cukup ID dan Region ID)
@@ -178,19 +110,18 @@ class TestingDataSeeder extends Seeder
         $this->command->info('⚡ Preparing data for ' . $allDinas->count() . ' users...');
 
         // 2. HASH PASSWORD CUMA SEKALI (Ini hemat CPU banget!)
-        // Jangan di-hash di dalam loop, itu bikin berat.
         $passwordHash = Hash::make('password');
         $now = now(); // Biar created_at seragam
 
         $userData = [];
         
-        // 3. Susun Data di Memory Dulu (Jangan langsung kirim ke DB)
+        // 3. Susun Data di Memory Dulu
         foreach ($allDinas as $index => $dinas) {
             $kodeDinas = str_pad($index + 1, 3, '0', STR_PAD_LEFT);
             
             $userData[] = [
                 'email' => "dlh{$kodeDinas}@test.com",
-                'password' => $passwordHash, // Pake hash yang udah jadi
+                'password' => $passwordHash,
                 'role' => $dinas->region->type ?? 'kabupaten/kota',
                 'dinas_id' => $dinas->id,
                 'is_active' => true,
@@ -206,21 +137,19 @@ class TestingDataSeeder extends Seeder
         $this->command->info('🚀 Inserting users into TiDB (Bulk Mode)...');
         
         foreach ($chunks as $chunk) {
-            User::insert($chunk); // <--- INI KUNCINYA! 1 Query buat 500 user.
+            User::insert($chunk);
             $this->command->info('✅ Inserted batch of ' . count($chunk) . ' users.');
         }
         
         $this->command->newLine();
     }
-
+    
     /**
-     * Seed Submissions & Documents untuk N dinas pertama
-     * 
-     * @param int $count Jumlah dinas yang akan dibuatkan submission
+     * Seed Submissions & Documents untuk N dinas tertentu
+     * * @param array $targetIds Array ID dinas yang akan dibuatkan submission
      * @param int $year Tahun submission
      * @return int Jumlah dinas yang berhasil dibuatkan submission
      */
-    // Ganti 'int $count' jadi 'array $targetIds'
     private function seedSubmissionsAndDocuments(array $targetIds, int $year): int
     {
         $templateDisk = Storage::disk('templates');
@@ -232,7 +161,6 @@ class TestingDataSeeder extends Seeder
         $sourcePdf2 = 'slhd/buku2/erd.pdf';
         $sourcePdf3 = 'slhd/buku3/erd.pdf';
 
-        
         // Validasi source PDF exist
         if (!$templateDisk->exists($sourcePdf)) {
             throw new \Exception("Source PDF not found: {$sourcePdf}");
