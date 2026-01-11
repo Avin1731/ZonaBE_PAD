@@ -40,7 +40,7 @@ class TestingDataSeeder extends Seeder
             
             // 3. Seed Submissions & Documents untuk N dinas
             $this->command->info('📄 Creating submissions & documents...');
-            $dinasCount = $this->seedSubmissionsAndDocuments(100, 2026); // 100 dinas pertama
+            $dinasCount = $this->seedSubmissionsAndDocuments(50, 2026); // 100 dinas pertama
             
             DB::commit();
             
