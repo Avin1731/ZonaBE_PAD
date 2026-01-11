@@ -1,20 +1,13 @@
 <?php
 
 return [
-    /*
-    |--------------------------------------------------------------------------
-    | Cross-Origin Resource Sharing (CORS) Configuration
-    |--------------------------------------------------------------------------
-    */
-
-    // 👇 UBAH JADI BINTANG '*' (Mencakup semua path: api/, sanctum/, dll)
-    'paths' => ['*'],
+    'paths' => ['*'], // Tetap pakai bintang agar aman di Vercel
 
     'allowed_methods' => ['*'],
 
     'allowed_origins' => [
         'http://localhost:3000',
-        'https://zona-fe-pad.vercel.app', // Pastikan URL ini benar
+        'https://zona-fe-pad.vercel.app', // TANPA slash di akhir
     ],
 
     'allowed_origins_patterns' => [],
