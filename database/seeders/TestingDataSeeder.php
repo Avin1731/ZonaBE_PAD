@@ -24,38 +24,85 @@ class TestingDataSeeder extends Seeder
      * - Bikin users untuk semua dinas
      * - Bikin submissions + documents untuk N dinas (configurable)
      */
+    // public function run(): void
+    // {
+    //     $this->command->info('🚀 Starting Testing Data Seeder...');
+        
+    //     // DB::beginTransaction();
+    //     try {
+    //         // 1. Create admin & pusdatin users
+    //         $this->command->info('👤 Creating admin & pusdatin users...');
+    //         $this->seedAdminUsers();
+            
+    //         // 2. Create users untuk semua dinas existing
+    //         $this->command->info('👥 Creating users for all dinas...');
+    //         $this->seedDinasUsers();
+            
+    //         // 3. Seed Submissions & Documents Custom Range
+    //         $this->command->info('📄 Creating submissions & documents...');
+            
+    //         // Bikin daftar ID: 1 sampai 10 DAN 50 sampai 60
+    //         $ids_grup_1 = range(1, 10);   // [1, 2, ..., 10]
+    //         $ids_grup_2 = range(50, 60);  // [50, 51, ..., 60]
+            
+    //         // Gabung jadi satu array
+    //         $targetIds = array_merge($ids_grup_1, $ids_grup_2); 
+            
+    //         // Panggil function dengan array ID tadi
+    //         $dinasCount = $this->seedSubmissionsAndDocuments($targetIds, 2026);
+            
+    //         // DB::commit();
+            
+    //         $this->command->info('✅ Testing data seeded successfully!');
+    //         $this->command->info("📊 Total users: " . User::count());
+    //         $this->command->info("📊 Submissions created for {$dinasCount} dinas");
+            
+    //     } catch (\Exception $e) {
+    //         // DB::rollBack();
+    //         $this->command->error('❌ Seeding failed: ' . $e->getMessage());
+    //         throw $e;
+    //     }
+    // }
+    
     public function run(): void
     {
-        $this->command->info('🚀 Starting Testing Data Seeder...');
+        $this->command->info('🚀 Starting Testing Data Seeder (Mode Anti-Stuck)...');
         
-        // DB::beginTransaction();
+        // DB::beginTransaction(); // Matikan transaction global
         try {
             // 1. Create admin & pusdatin users
             $this->command->info('👤 Creating admin & pusdatin users...');
             $this->seedAdminUsers();
             
-            // 2. Create users untuk semua dinas existing
+            // 2. Create users untuk semua dinas (Pake Reconnect di dalamnya biar aman)
             $this->command->info('👥 Creating users for all dinas...');
             $this->seedDinasUsers();
+
+            // --- TAMBAHAN PENTING: DEADLINE (BIAR GAK 403) ---
+            $this->command->info('⏰ Creating deadlines...');
+            \App\Models\Pusdatin\Deadline::create([
+               'tahun' => 2026,
+               'start_date' => now()->subDays(1),
+               'end_date' => now()->addMonths(6),
+               'kategori' => 'submission',
+               'is_active' => true
+            ]);
+            // --------------------------------------------------
             
-            // 3. Seed Submissions & Documents Custom Range
+            // 3. Seed Submissions (CUKUP 3 BIJI AJA BUAT TES)
             $this->command->info('📄 Creating submissions & documents...');
             
-            // Bikin daftar ID: 1 sampai 10 DAN 50 sampai 60
-            $ids_grup_1 = range(1, 10);   // [1, 2, ..., 10]
-            $ids_grup_2 = range(50, 60);  // [50, 51, ..., 60]
+            // Kita ambil ID 1, 2, dan 50 (Perwakilan grup)
+            // Gak usah range(1,10), kelamaan bang!
+            $targetIds = [1, 2, 50]; 
             
-            // Gabung jadi satu array
-            $targetIds = array_merge($ids_grup_1, $ids_grup_2); 
-            
-            // Panggil function dengan array ID tadi
+            // Panggil function
             $dinasCount = $this->seedSubmissionsAndDocuments($targetIds, 2026);
             
             // DB::commit();
             
             $this->command->info('✅ Testing data seeded successfully!');
-            $this->command->info("📊 Total users: " . User::count());
-            $this->command->info("📊 Submissions created for {$dinasCount} dinas");
+            $this->command->info("📊 Submissions created for: " . implode(', ', $targetIds));
             
         } catch (\Exception $e) {
             // DB::rollBack();
@@ -63,7 +110,7 @@ class TestingDataSeeder extends Seeder
             throw $e;
         }
     }
-    
+
     /**
      * Create admin & pusdatin users
      */
