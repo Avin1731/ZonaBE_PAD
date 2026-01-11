@@ -154,33 +154,76 @@ class TestingDataSeeder extends Seeder
     /**
      * Create users untuk semua dinas existing
      */
+    // private function seedDinasUsers(): void
+    // {
+    //     $allDinas = Dinas::with('region')->get();
+        
+    //     $progressBar = $this->command->getOutput()->createProgressBar($allDinas->count());
+    //     $progressBar->start();
+        
+    //     foreach ($allDinas as $index => $dinas) {
+    //         $kodeDinas = str_pad($index + 1, 3, '0', STR_PAD_LEFT);
+            
+    //         User::firstOrCreate(
+    //             ['email' => "dlh{$kodeDinas}@test.com"],
+    //             [
+    //                 'password' => Hash::make('password'),
+    //                 'role' => $dinas->region->type, // 'provinsi' or 'kabupaten/kota'
+    //                 'dinas_id' => $dinas->id,
+    //                 'is_active' => true,
+    //             ]
+    //         );
+            
+    //         $progressBar->advance();
+    //     }
+        
+    //     $progressBar->finish();
+    //     $this->command->newLine();
+    // }
+    
     private function seedDinasUsers(): void
     {
-        $allDinas = Dinas::with('region')->get();
+        // 1. Ambil semua data Dinas (Cukup ID dan Region ID)
+        $allDinas = Dinas::with('region')->select('id', 'region_id', 'nama_dinas')->get();
         
-        $progressBar = $this->command->getOutput()->createProgressBar($allDinas->count());
-        $progressBar->start();
+        $this->command->info('⚡ Preparing data for ' . $allDinas->count() . ' users...');
+
+        // 2. HASH PASSWORD CUMA SEKALI (Ini hemat CPU banget!)
+        // Jangan di-hash di dalam loop, itu bikin berat.
+        $passwordHash = Hash::make('password');
+        $now = now(); // Biar created_at seragam
+
+        $userData = [];
         
+        // 3. Susun Data di Memory Dulu (Jangan langsung kirim ke DB)
         foreach ($allDinas as $index => $dinas) {
             $kodeDinas = str_pad($index + 1, 3, '0', STR_PAD_LEFT);
             
-            User::firstOrCreate(
-                ['email' => "dlh{$kodeDinas}@test.com"],
-                [
-                    'password' => Hash::make('password'),
-                    'role' => $dinas->region->type, // 'provinsi' or 'kabupaten/kota'
-                    'dinas_id' => $dinas->id,
-                    'is_active' => true,
-                ]
-            );
-            
-            $progressBar->advance();
+            $userData[] = [
+                'email' => "dlh{$kodeDinas}@test.com",
+                'password' => $passwordHash, // Pake hash yang udah jadi
+                'role' => $dinas->region->type ?? 'kabupaten/kota',
+                'dinas_id' => $dinas->id,
+                'is_active' => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+
+        // 4. KIRIM GROSIRAN (BULK INSERT)
+        // Kita pecah per 500 data biar paketnya gak kegedean
+        $chunks = array_chunk($userData, 500);
+        
+        $this->command->info('🚀 Inserting users into TiDB (Bulk Mode)...');
+        
+        foreach ($chunks as $chunk) {
+            User::insert($chunk); // <--- INI KUNCINYA! 1 Query buat 500 user.
+            $this->command->info('✅ Inserted batch of ' . count($chunk) . ' users.');
         }
         
-        $progressBar->finish();
         $this->command->newLine();
     }
-    
+
     /**
      * Seed Submissions & Documents untuk N dinas pertama
      * 
