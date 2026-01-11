@@ -141,7 +141,8 @@ class TestingDataSeeder extends Seeder
      * @param int $year Tahun submission
      * @return int Jumlah dinas yang berhasil dibuatkan submission
      */
-    private function seedSubmissionsAndDocuments(int $count, int $year): int
+    // Ganti 'int $count' jadi 'array $targetIds'
+    private function seedSubmissionsAndDocuments(array $targetIds, int $year): int
     {
         $templateDisk = Storage::disk('templates');
         $dlhDisk = Storage::disk('dlh');
@@ -180,7 +181,7 @@ class TestingDataSeeder extends Seeder
         }
         
         // Ambil N dinas pertama (ordered by id)
-        $dinasIds = Dinas::orderBy('id')->limit($count)->pluck('id');
+        $dinasIds = Dinas::whereIn('id', $targetIds)->orderBy('id')->pluck('id');
         
         $progressBar = $this->command->getOutput()->createProgressBar($dinasIds->count());
         $progressBar->start();
