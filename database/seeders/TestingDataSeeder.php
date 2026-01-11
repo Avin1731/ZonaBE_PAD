@@ -77,17 +77,6 @@ class TestingDataSeeder extends Seeder
             // 2. Create users untuk semua dinas (Pake Reconnect di dalamnya biar aman)
             $this->command->info('👥 Creating users for all dinas...');
             $this->seedDinasUsers();
-
-            // --- TAMBAHAN PENTING: DEADLINE (BIAR GAK 403) ---
-            $this->command->info('⏰ Creating deadlines...');
-            \App\Models\Pusdatin\Deadline::create([
-               'tahun' => 2026,
-               'start_date' => now()->subDays(1),
-               'end_date' => now()->addMonths(6),
-               'kategori' => 'submission',
-               'is_active' => true
-            ]);
-            // --------------------------------------------------
             
             // 3. Seed Submissions (CUKUP 3 BIJI AJA BUAT TES)
             $this->command->info('📄 Creating submissions & documents...');
