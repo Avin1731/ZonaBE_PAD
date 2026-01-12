@@ -150,7 +150,7 @@ class TestingDataSeeder extends Seeder
     
     /**
      * Seed Submissions & Documents untuk N dinas tertentu
-     * * @param array $targetIds Array ID dinas yang akan dibuatkan submission
+     * @param array $targetIds Array ID dinas yang akan dibuatkan submission
      * @param int $year Tahun submission
      * @return int Jumlah dinas yang berhasil dibuatkan submission
      */
@@ -176,7 +176,6 @@ class TestingDataSeeder extends Seeder
         
         foreach ($templateFiles as $file) {
             $filename = basename($file);
-            // Extract nomor dari nama file (format: "28. Nama.xlsx" atau "01 Nama.xlsx")
             if (preg_match('/^0*(\d+)[\.\s]/', $filename, $matches)) {
                 $nomor = (int) $matches[1];
                 if ($nomor >= 1 && $nomor <= 80) {
@@ -187,10 +186,6 @@ class TestingDataSeeder extends Seeder
         
         $this->command->info("📊 Found " . count($tabelTemplates) . " tabel templates");
         
-        if (count($tabelTemplates) < 80) {
-            $this->command->warn("⚠️  Warning: Only " . count($tabelTemplates) . " templates found, expected 80");
-        }
-        
         // Ambil N dinas pertama (ordered by id)
         $dinasIds = Dinas::whereIn('id', $targetIds)->orderBy('id')->pluck('id');
         
@@ -198,84 +193,81 @@ class TestingDataSeeder extends Seeder
         $progressBar->start();
         
         foreach ($dinasIds as $dinasId) {
-            // Create Submission
-            $submission = Submission::create([
-                'id_dinas' => $dinasId,
-                'tahun' => $year,
-                'status' => 'finalized', // Auto-finalized untuk testing
-            ]);
+            // 🔥 PERBAIKAN 1: Pake firstOrCreate biar gak error duplikat submission
+            $submission = Submission::firstOrCreate(
+                ['id_dinas' => $dinasId, 'tahun' => $year], // Cek kombinasi ini
+                ['status' => 'finalized'] // Kalau gak ada, baru bikin dengan status ini
+            );
             
             $basePath = "uploads/{$year}/dlh_{$dinasId}";
             
-            // 1. Ringkasan Eksekutif (copy PDF dari templates ke dlh)
+            // 1. Ringkasan Eksekutif
             $ringkasanPath = "{$basePath}/ringkasan_eksekutif/ringkasan_{$dinasId}_{$year}.pdf";
             $dlhDisk->put($ringkasanPath, $templateDisk->get($sourcePdf));
             
-            RingkasanEksekutif::create([
-                'submission_id' => $submission->id,
-                'path' => $ringkasanPath,
-                'status' => 'finalized',
-            ]);
+            // 🔥 PERBAIKAN 2: Pake updateOrCreate untuk file anak-anaknya juga
+            RingkasanEksekutif::updateOrCreate(
+                ['submission_id' => $submission->id],
+                ['path' => $ringkasanPath, 'status' => 'finalized']
+            );
             
-            // 2. Laporan Utama (copy PDF dari templates ke dlh)
+            // 2. Laporan Utama
             $laporanPath = "{$basePath}/laporan_utama/laporan_{$dinasId}_{$year}.pdf";
             $dlhDisk->put($laporanPath, $templateDisk->get($sourcePdf2));
             
-            LaporanUtama::create([
-                'submission_id' => $submission->id,
-                'path' => $laporanPath,
-                'status' => 'finalized',
-            ]);
+            LaporanUtama::updateOrCreate(
+                ['submission_id' => $submission->id],
+                ['path' => $laporanPath, 'status' => 'finalized']
+            );
 
+            // Lampiran
             $lampiranPath = "{$basePath}/lampiran/lampiran_{$dinasId}_{$year}.pdf";
             $dlhDisk->put($lampiranPath, $templateDisk->get($sourcePdf3));
-            Lampiran::create([
-                'submission_id' => $submission->id,
-                'path' => "{$basePath}/lampiran/lampiran_{$dinasId}_{$year}.pdf",
-                'status' => 'finalized',
-            ]);
             
-            // 3. IKLH (TIDAK PERLU FILE, hanya indeks)
-            Iklh::create([
-                'submission_id' => $submission->id,
-                'status' => 'finalized',
-                'indeks_kualitas_air' => rand(70, 100),
-                'indeks_kualitas_udara' => rand(70, 100),
-                'indeks_kualitas_lahan' => rand(70, 100),
-                'indeks_kualitas_pesisir_laut' => rand(70, 100),
-                'indeks_kualitas_kehati' => rand(70, 100),
-            ]);
+            Lampiran::updateOrCreate(
+                ['submission_id' => $submission->id],
+                ['path' => $lampiranPath, 'status' => 'finalized']
+            );
             
-            // 4. Tabel Utama (80 files dari MatraConstants)
+            // 3. IKLH
+            Iklh::updateOrCreate(
+                ['submission_id' => $submission->id],
+                [
+                    'status' => 'finalized',
+                    'indeks_kualitas_air' => rand(70, 100),
+                    'indeks_kualitas_udara' => rand(70, 100),
+                    'indeks_kualitas_lahan' => rand(70, 100),
+                    'indeks_kualitas_pesisir_laut' => rand(70, 100),
+                    'indeks_kualitas_kehati' => rand(70, 100),
+                ]
+            );
+            
+            // 4. Tabel Utama
             $allKodeTabel = MatraConstants::getAllKodeTabel();
             
             foreach ($allKodeTabel as $kodeTabel) {
                 $matra = MatraConstants::getMatraByKode($kodeTabel);
                 $nomorTabel = MatraConstants::extractNomorTabel($kodeTabel);
                 
-                // Sanitize for file/folder names
                 $matraSanitized = str_replace([' ', ',', '.', '(', ')'], '_', $matra);
-                $kodeTabelSanitized = str_replace([' ', '||'], ['_', '-'], $kodeTabel);
                 
                 $tabelPath = "{$basePath}/tabel_utama/{$matraSanitized}/tabel_{$nomorTabel}_{$dinasId}_{$year}.xlsx";
                 
-                // Cek apakah ada template untuk nomor ini
                 if (isset($tabelTemplates[$nomorTabel])) {
-                    // Copy dari template yang sesuai
                     $dlhDisk->put($tabelPath, $templateDisk->get($tabelTemplates[$nomorTabel]));
                 } else {
-                    // Skip jika template tidak ada
-                    $this->command->warn("⚠️  Template for Tabel {$nomorTabel} not found, skipping...");
-                    continue;
+                    // Skip warning biar log gak penuh, cukup continue
+                    continue; 
                 }
                 
-                TabelUtama::create([
-                    'submission_id' => $submission->id,
-                    'kode_tabel' => $kodeTabel,
-                    'path' => $tabelPath,
-                    'matra' => $matra,
-                    'status' => 'finalized',
-                ]);
+                TabelUtama::updateOrCreate(
+                    ['submission_id' => $submission->id, 'kode_tabel' => $kodeTabel],
+                    [
+                        'path' => $tabelPath,
+                        'matra' => $matra,
+                        'status' => 'finalized',
+                    ]
+                );
             }
             
             $progressBar->advance();
