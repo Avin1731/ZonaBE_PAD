@@ -51,9 +51,6 @@ class TestingDataSeeder extends Seeder
             // Total ada 11 Dinas yang bakal dibuatkan data. Aman, gak bakal berat.
             $dinasCount = $this->seedSubmissionsAndDocuments($targetIds, 2026); 
             
-            // Panggil function
-            $dinasCount = $this->seedSubmissionsAndDocuments($targetIds, 2026);
-            
             // DB::commit();
             
             $this->command->info('✅ Testing data seeded successfully!');
