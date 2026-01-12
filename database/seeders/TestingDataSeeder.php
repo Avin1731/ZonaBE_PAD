@@ -41,8 +41,15 @@ class TestingDataSeeder extends Seeder
             // 3. Seed Submissions (CUKUP 3 BIJI AJA BUAT TES)
             $this->command->info('📄 Creating submissions & documents...');
             
-            // Kita ambil ID 1, 2, dan 50 (Perwakilan grup)
-            $targetIds = [1, 2, 50]; 
+            // Bikin range otomatis
+            $grupA = range(1, 5);   // [1, 2, 3, 4, 5]
+            $grupB = range(50, 55); // [50, 51, 52, 53, 54, 55]
+            
+            // Gabung jadi satu array
+            $targetIds = array_merge($grupA, $grupB); 
+            
+            // Total ada 11 Dinas yang bakal dibuatkan data. Aman, gak bakal berat.
+            $dinasCount = $this->seedSubmissionsAndDocuments($targetIds, 2026); 
             
             // Panggil function
             $dinasCount = $this->seedSubmissionsAndDocuments($targetIds, 2026);
