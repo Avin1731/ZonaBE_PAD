@@ -7,6 +7,11 @@ use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Dinas\UploadController;
 use App\Http\Controllers\Pusdatin\PenilaianSLHD_Controller;
 use App\http\Controllers\Pusdatin\PenilaianPenghargaan_Controller;
+use App\Http\Controllers\Pusdatin\DeadlineController;
+use App\Http\Controllers\Pusdatin\Validasi_1_Controller;
+use App\Http\Controllers\Pusdatin\Validasi_2_Controller;
+use App\Http\Controllers\Pusdatin\WawancaraController;
+use App\Http\Controllers\Admin\DashboardController;
 
 
 // --- ROUTES ANALYTICS ---
@@ -105,39 +110,77 @@ Route::get('/wilayah/provinces', function () {
     ]);
 });
 
-Route::middleware(['auth:sanctum','role:admin'])->group(function () {
-        // Dashboard endpoints
-        Route::get('/admin/dashboard', [App\Http\Controllers\Admin\DashboardController::class, 'getStats']); // Alias untuk FE
-        Route::get('/admin/dashboard/stats', [App\Http\Controllers\Admin\DashboardController::class, 'getStats']);
-        Route::get('/admin/dashboard/activities', [App\Http\Controllers\Admin\DashboardController::class, 'getRecentActivities']);
-        Route::get('/admin/users/{id}/detail', [App\Http\Controllers\Admin\DashboardController::class, 'getUserDetail']);
-        
-        // User management
-        Route::patch('/admin/users/approve/{id}', [AdminController::class, 'approveUser']);
-        Route::delete('/admin/users/reject/{id}', [AdminController::class, 'rejectUser']);
-        Route::delete('/admin/users/{id}', [AdminController::class, 'deleteUser']);
-        Route::post('/admin/users/pusdatin', [AdminController::class, 'createPusdatin']);
-        Route::get('/admin/{role}/{status}',[AdminController::class,'showUser']);
-        Route::get('/admin/track/{year?}/{pusdatin_id?}',[AdminController::class,'trackingHistoryPusdatin']);
-        
-        // Get list pusdatin untuk dropdown
-        Route::get('/admin/pusdatin/approved', [AdminController::class, 'showUser'])->defaults('role', 'pusdatin')->defaults('status', 'approved');
+Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
 
-        Route::prefix('admin/deadline')->controller(App\Http\Controllers\Pusdatin\DeadlineController::class)->group(function () {
-            Route::get('/date/{year?}', 'index'); // Get deadline submission
-            Route::post('/set', 'setDeadline'); // Set/update deadline submission
-            Route::delete('/{id}', 'deleteDeadline'); // Delete deadline
-        });
-        
-        // Unfinalize endpoints - hanya admin yang bisa unfinalize
-        Route::prefix('admin/unfinalize')->group(function () {
-            Route::patch('/slhd/{year}', [App\Http\Controllers\Pusdatin\PenilaianSLHD_Controller::class, 'unfinalized']);
-            Route::patch('/penghargaan/{year}', [App\Http\Controllers\Pusdatin\PenilaianPenghargaan_Controller::class, 'unfinalized']);
-            Route::patch('/validasi-1/{year}', [App\Http\Controllers\Pusdatin\Validasi_1_Controller::class, 'unfinalize']);
-            Route::patch('/validasi-2/{year}', [App\Http\Controllers\Pusdatin\Validasi_2_Controller::class, 'unfinalize']);
-            Route::patch('/wawancara/{year}', [App\Http\Controllers\Pusdatin\WawancaraController::class, 'unfinalize']);
-        });
+    // ==========================================
+    // 1. DASHBOARD & STATS (Prioritas Paling Tinggi)
+    // ==========================================
+    Route::get('/admin/dashboard', [DashboardController::class, 'getStats']);
+    Route::get('/admin/dashboard/stats', [DashboardController::class, 'getStats']);
+    Route::get('/admin/dashboard/activities', [DashboardController::class, 'getRecentActivities']);
+    Route::get('/admin/users/{id}/detail', [DashboardController::class, 'getUserDetail']);
+
+    // ==========================================
+    // 2. LOGS & TRACKING
+    // ==========================================
+    Route::get('/admin/system-logs', [AdminController::class, 'getSystemLogs']); 
+    
+    // Endpoint filter log spesifik
+    Route::get('/admin/logs/admin', [AdminController::class, 'getAdminLogs']);
+    Route::get('/admin/logs/pusdatin', [AdminController::class, 'getPusdatinLogs']);
+    
+    // Endpoint tracking history (kompatibilitas fitur lama)
+    Route::get('/admin/track/{year?}/{pusdatin_id?}', [AdminController::class, 'trackingHistoryPusdatin']);
+
+    // ==========================================
+    // 3. USER MANAGEMENT ACTIONS (CRUD)
+    // ==========================================
+    Route::patch('/admin/users/approve/{id}', [AdminController::class, 'approveUser']);
+    Route::delete('/admin/users/reject/{id}', [AdminController::class, 'rejectUser']);
+    Route::delete('/admin/users/{id}', [AdminController::class, 'deleteUser']);
+    Route::post('/admin/users/pusdatin', [AdminController::class, 'createPusdatin']);
+    
+    // List simple user (untuk dropdown/select)
+    Route::get('/admin/users', [AdminController::class, 'listUsers']);
+
+    // ==========================================
+    // 4. DEADLINE MANAGEMENT (Merged to AdminController)
+    // ==========================================
+    // Menggunakan AdminController untuk menangani deadline
+    Route::get('/admin/deadline/date/{year?}', [AdminController::class, 'getDeadline']);
+    Route::post('/admin/deadline/set', [AdminController::class, 'setDeadline']);
+    // (Opsional: delete deadline jika dibutuhkan, tapi biasanya update cukup)
+    
+    // ==========================================
+    // 5. UNFINALIZE (Reset Status Dokumen)
+    // ==========================================
+    Route::prefix('admin/unfinalize')->group(function () {
+        Route::patch('/slhd/{year}', [PenilaianSLHD_Controller::class, 'unfinalized']);
+        Route::patch('/penghargaan/{year}', [PenilaianPenghargaan_Controller::class, 'unfinalized']);
+        Route::patch('/validasi-1/{year}', [Validasi_1_Controller::class, 'unfinalize']);
+        Route::patch('/validasi-2/{year}', [Validasi_2_Controller::class, 'unfinalize']);
+        Route::patch('/wawancara/{year}', [WawancaraController::class, 'unfinalize']);
     });
+
+    // ==========================================
+    // 6. USER LISTING (READ - Dynamic Routes)
+    // ==========================================
+    
+    // A. Specific Defaults (Prioritas Tinggi)
+    Route::get('/admin/all/approved', [AdminController::class, 'showUser'])
+        ->defaults('role', 'all')->defaults('status', 'approved');
+
+    Route::get('/admin/all/pending', [AdminController::class, 'showUser'])
+        ->defaults('role', 'all')->defaults('status', 'pending');
+
+    Route::get('/admin/pusdatin/approved', [AdminController::class, 'showUser'])
+        ->defaults('role', 'pusdatin')->defaults('status', 'approved');
+
+    // B. Dynamic Wildcard (PALING BAWAH)
+    // Menangani /admin/{role}/{status} seperti: /admin/kabupaten/pending
+    Route::get('/admin/{role}/{status}', [AdminController::class, 'showUser']);
+
+});
 
 Route::middleware(['auth:sanctum', 'role:provinsi,kabupaten/kota', 'ensuresubmissions'])
 ->prefix('dinas/upload')

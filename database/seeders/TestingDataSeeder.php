@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\Region;
 use App\Models\Dinas;
 use App\Models\User;
+use App\Models\AdminLog;
 use App\Models\Submission;
 use App\Models\Files\RingkasanEksekutif;
 use App\Models\Files\LaporanUtama;
@@ -64,11 +65,12 @@ class TestingDataSeeder extends Seeder
     }
     
     /**
-     * Create admin & pusdatin users
+     * Create admin & pusdatin users AND logs
      */
     private function seedAdminUsers(): void
     {
-        User::firstOrCreate(
+        // 1. Admin Utama
+        $admin = User::firstOrCreate(
             ['email' => 'admin@test.com'],
             [
                 'password' => Hash::make('password'),
@@ -76,6 +78,8 @@ class TestingDataSeeder extends Seeder
                 'is_active' => true,
             ]
         );
+
+        // 2. Admin Kedua
         User::firstOrCreate(
             ['email' => 'admin2@test.com'],
             [
@@ -85,7 +89,8 @@ class TestingDataSeeder extends Seeder
             ]
         );
 
-        User::firstOrCreate(
+        // 3. Pusdatin
+        $pusdatin = User::firstOrCreate(
             ['email' => 'pusdatin@test.com'],
             [
                 'password' => Hash::make('password'),
@@ -93,6 +98,8 @@ class TestingDataSeeder extends Seeder
                 'is_active' => true,
             ]
         );
+
+        // 4. Pusdatin Kedua
         User::firstOrCreate(
             ['email' => 'pusdatin2@test.com'],
             [
@@ -101,6 +108,47 @@ class TestingDataSeeder extends Seeder
                 'is_active' => true,
             ]
         );
+
+        // --- TAMBAHAN PENTING: SEED ADMIN LOGS ---
+        // Jika tabel log masih kosong, isi dengan dummy data agar halaman Log Riwayat tidak kosong
+        if (AdminLog::count() === 0) {
+            $this->command->info('📜 Seeding dummy admin logs...');
+            
+            $logsData = [
+                [
+                    'admin_id' => $admin->id,
+                    'target_user_id' => null,
+                    'action' => 'system_init',
+                    'details' => 'Inisialisasi sistem database seeder',
+                    'ip_address' => '127.0.0.1',
+                    'user_agent' => 'System Seeder Agent',
+                    'created_at' => now()->subDays(2),
+                    'updated_at' => now()->subDays(2),
+                ],
+                [
+                    'admin_id' => $admin->id,
+                    'target_user_id' => $pusdatin->id,
+                    'action' => 'create_pusdatin',
+                    'details' => 'Membuat akun Pusdatin baru: pusdatin@test.com',
+                    'ip_address' => '127.0.0.1',
+                    'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                    'created_at' => now()->subDay(),
+                    'updated_at' => now()->subDay(),
+                ],
+                [
+                    'admin_id' => $admin->id,
+                    'target_user_id' => null,
+                    'action' => 'approve_user',
+                    'details' => 'Menyetujui pendaftaran user Dinas Lingkungan Hidup Kab. Bogor',
+                    'ip_address' => '192.168.1.10',
+                    'user_agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+                    'created_at' => now()->subHours(5),
+                    'updated_at' => now()->subHours(5),
+                ]
+            ];
+
+            AdminLog::insert($logsData);
+        }
     }
     
     /**

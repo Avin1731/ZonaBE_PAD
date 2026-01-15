@@ -2,19 +2,23 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable; // PENTING: Pakai Authenticatable, bukan Model biasa
+use Laravel\Sanctum\HasApiTokens;
 
-class User extends Model
+class User extends Authenticatable
 {
-    protected $fillable = [
-        'dinas_id',
-        'email',
+    use HasApiTokens;
+
+    protected $table = 'users';
+
+    protected $fillable = ['email', 'password', 'role', 'dinas_id', 'is_active'];
+
+    protected $hidden = [
         'password',
-        'role',
-        'is_active',
     ];
-    use \Laravel\Sanctum\HasApiTokens;
-    public function dinas(){
+
+    public function dinas()
+    {
         return $this->belongsTo(Dinas::class, 'dinas_id');
     }
 }
