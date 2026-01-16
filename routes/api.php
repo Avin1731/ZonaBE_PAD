@@ -6,7 +6,7 @@ use App\Models\User;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Dinas\UploadController;
 use App\Http\Controllers\Pusdatin\PenilaianSLHD_Controller;
-use App\http\Controllers\Pusdatin\PenilaianPenghargaan_Controller;
+use App\Http\Controllers\Pusdatin\PenilaianPenghargaan_Controller;
 use App\Http\Controllers\Pusdatin\DeadlineController;
 use App\Http\Controllers\Pusdatin\Validasi_1_Controller;
 use App\Http\Controllers\Pusdatin\Validasi_2_Controller;

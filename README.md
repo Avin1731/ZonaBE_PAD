@@ -21,41 +21,89 @@ Laravel is a web application framework with expressive, elegant syntax. We belie
 
 Laravel is accessible, powerful, and provides tools required for large, robust applications.
 
-## Learning Laravel
+# 🚀 SIPELITA MAINTENANCE GUIDE
+*Dokumen maintenance untuk aplikasi SIPELITA*
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
-
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-## Laravel Sponsors
-
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
-
-### Premium Partners
-
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
-
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## 📊 STATUS CHECK
+```bash
+pm2 status                                # Cek status semua service
+sudo lsof -i :3000                        # Cek port frontend
+sudo lsof -i :8081                        # Cek port backend
+curl http://localhost:3000/api/health     # Test API kesehatan
+```
+## 📝 LOGS MONITORING
+```bash
+pm2 logs                                  # Semua logs realtime
+pm2 logs sipelita-frontend --lines 50     # Logs frontend
+pm2 logs sipelita-backend --lines 50      # Logs backend
+tail -f /var/www/sipelita/backend/storage/logs/laravel.log  # Laravel logs
+```
+## 🔄 RESTART & RELOAD
+```bash
+pm2 restart all                           # Restart semua
+pm2 restart sipelita-frontend             # Restart frontend saja
+pm2 restart sipelita-backend              # Restart backend saja
+pm2 reload all                            # Reload tanpa downtime
+```
+## 🚨 FULL RESET (Emergency)
+```bash
+pm2 stop all
+pm2 delete all
+cd /var/www/sipelita/backend && pm2 start ./start.sh --name sipelita-backend
+cd /var/www/sipelita/frontend && pm2 start "pnpm run start" --name sipelita-frontend
+pm2 save
+```
+## 🔄 UPDATE APLIKASI
+### Frontend (Next.js)
+```bash
+cd /var/www/sipelita/frontend
+git pull origin main
+pnpm install
+pnpm run build
+pm2 restart sipelita-frontend
+```
+### Backend (Laravel)
+```bash
+cd /var/www/sipelita/backend
+git pull origin main
+composer install --no-dev --optimize-autoloader
+php artisan migrate --force
+php artisan config:clear
+php artisan cache:clear
+php artisan route:clear
+php artisan view:clear
+pm2 restart sipelita-backend
+```
+## 🛠️ TROUBLESHOOTING
+### 1. Port Conflict
+```bash
+sudo lsof -i :3000                        # Cek apa yang pakai port 3000
+sudo kill -9 $(sudo lsof -t -i:3000)      # Kill process di port 3000
+sudo lsof -i :8081                        # Cek apa yang pakai port 8081  
+sudo kill -9 $(sudo lsof -t -i:8081)      # Kill process di port 8081
+```
+### 2. Permission Issues
+```bash
+sudo chown -R nirwasita:www-data /var/www/sipelita
+sudo chmod -R 775 /var/www/sipelita/backend/storage
+sudo chmod -R 775 /var/www/sipelita/backend/bootstrap/cache
+```
+### 3. Disk Space
+```bash
+df -h                                      # Cek disk usage
+du -sh /var/www/sipelita/frontend/.next/  # Cek Next.js build size
+du -sh /var/www/sipelita/backend/storage/ # Cek Laravel storage
+```
+### 4. Network Check
+```bash
+curl -I http://localhost:3000/            # Test frontend lokal
+curl -I http://localhost:8081/api         # Test backend lokal
+curl -I https://nirwasita.kemenlh.go.id   # Test dari luar
+```
+## 📍 ARSITEKTUR APLIKASI
+```bash
+Frontend: Next.js (port 3000) → http://localhost:3000
+Backend:  Laravel (port 8081) → http://localhost:8081
+Proxy:    /api/* → Laravel backend
+Domain:   https://nirwasita.kemenlh.go.id
+```
